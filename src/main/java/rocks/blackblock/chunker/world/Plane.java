@@ -3,6 +3,8 @@ package rocks.blackblock.chunker.world;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
+import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.dimension.DimensionType;
 import rocks.blackblock.chunker.Chunker;
@@ -21,6 +23,29 @@ public class Plane {
     private ServerWorld world;
     private DimensionType dimension;
     private ChunkFetcher.Session fetcher = null;
+
+    /**
+     * Creates a new Plane with the given World
+     *
+     * @param   world   The world to work with
+     *
+     * @since   0.1.0
+     */
+    public Plane(World world) {
+
+        if (world instanceof ServerWorld) {
+            this.world = (ServerWorld) world;
+        } else {
+            for (ServerWorld server_world : Chunker.SERVER.getWorlds()) {
+                if (server_world.getRegistryKey().getValue().equals(world.getRegistryKey().getValue())) {
+                    this.world = server_world;
+                    break;
+                }
+            }
+        }
+
+        this.dimension = this.world.getDimension();
+    }
 
     /**
      * Creates a new Plane with the given ServerWorld
@@ -74,7 +99,7 @@ public class Plane {
      *
      * @since   0.1.0
      */
-    public static Plane from(ServerWorld world) {
+    public static Plane from(World world) {
         return new Plane(world);
     }
 
@@ -103,6 +128,17 @@ public class Plane {
      */
     public boolean hasCeiling() {
         return this.dimension.hasCeiling();
+    }
+
+    /**
+     * Get a Lump chunk from this plane
+     *
+     * @param   chunk_pos
+     *
+     * @since   0.1.0
+     */
+    public Lump getLump(ChunkPos chunk_pos) {
+        return getLump(chunk_pos.x, chunk_pos.z);
     }
 
     /**

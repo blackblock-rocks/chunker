@@ -2,6 +2,8 @@ package rocks.blackblock.chunker.chunk;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.block.MapColor;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.chunk.Chunk;
 import rocks.blackblock.chunker.TileGenerator;
@@ -75,6 +77,38 @@ public class Lump {
      */
     public Plane getPlane() {
         return this.plane;
+    }
+
+    /**
+     * Force load this chunk
+     *
+     * @param   enable   Whether to enable or disable
+     *
+     * @since   0.1.0
+     */
+    public void forceLoad(boolean enable) {
+        ServerWorld world = this.plane.getWorld();
+        world.setChunkForced(this.x, this.z, enable);
+    }
+
+    /**
+     * Is this chunk force-loaded?
+     *
+     * @since   0.1.0
+     */
+    public boolean isForceLoaded() {
+        ServerWorld world = this.plane.getWorld();
+        long pos_long = this.getPos().toLong();
+        return world.getForcedChunks().contains(pos_long);
+    }
+
+    /**
+     * Get the ChunkPos of this lump
+     *
+     * @since   0.1.0
+     */
+    public ChunkPos getPos() {
+        return new ChunkPos(this.x, this.z);
     }
 
     /**
@@ -189,7 +223,7 @@ public class Lump {
                 }
 
                 MapColor map_color = searcher.getCurrentMapColor();
-                System.out.println("Current map color: " + map_color);
+
                 int shade;
 
                 if (map_color == MapColor.WATER_BLUE) {

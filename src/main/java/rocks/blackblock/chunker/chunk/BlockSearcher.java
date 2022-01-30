@@ -63,7 +63,6 @@ public class BlockSearcher {
      * @since   0.1.0
      */
     public int getHeight() {
-        System.out.println("Height: " + this.height);
         return this.height;
     }
 
@@ -123,11 +122,7 @@ public class BlockSearcher {
         // Get the top, non-air block Y level
         this.height = heightmap.get(x & 15, z & 15);
 
-        System.out.println("Height at " + (x & 15) + ", " + (z & 15) + ": " + this.height);
-
         this.pos.set(lump.convertLocalCoordinateToGlobal(x), this.height, lump.convertLocalCoordinateToGlobal(z));
-
-        System.out.println("POS is now: " + this.pos + " for " + x + "," + z);
 
         if (this.height <= -63) {
             this.block_state = Blocks.BEDROCK.getDefaultState();

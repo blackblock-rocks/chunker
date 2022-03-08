@@ -9,6 +9,7 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.dimension.DimensionType;
 import rocks.blackblock.chunker.Chunker;
 import rocks.blackblock.chunker.chunk.ChunkFetcher;
+import rocks.blackblock.chunker.chunk.ChunkFetcher.Session;
 import rocks.blackblock.chunker.chunk.Lump;
 
 import java.awt.*;

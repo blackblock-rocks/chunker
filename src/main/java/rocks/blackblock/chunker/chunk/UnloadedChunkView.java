@@ -21,7 +21,7 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.UpgradeData;
-import net.minecraft.world.gen.feature.StructureFeature;
+import net.minecraft.world.gen.feature.ConfiguredStructureFeature;
 import net.minecraft.world.tick.BasicTickScheduler;
 import org.jetbrains.annotations.Nullable;
 
@@ -151,17 +151,12 @@ public class UnloadedChunkView extends Chunk {
     }
 
     @Override
-    public Map<StructureFeature<?>, StructureStart<?>> getStructureStarts() {
+    public Map<ConfiguredStructureFeature<?, ?>, StructureStart> getStructureStarts() {
         return null;
     }
 
     @Override
-    public void setStructureStarts(Map<StructureFeature<?>, StructureStart<?>> structureStarts) {
-
-    }
-
-    @Override
-    public void setShouldSave(boolean shouldSave) {
+    public void setStructureStarts(Map<ConfiguredStructureFeature<?, ?>, StructureStart> structureStarts) {
 
     }
 
@@ -241,32 +236,12 @@ public class UnloadedChunkView extends Chunk {
     }
 
     @Override
-    public @Nullable StructureStart<?> getStructureStart(StructureFeature<?> structure) {
+    public Map<ConfiguredStructureFeature<?, ?>, LongSet> getStructureReferences() {
         return null;
     }
 
     @Override
-    public void setStructureStart(StructureFeature<?> structure, StructureStart<?> start) {
-
-    }
-
-    @Override
-    public LongSet getStructureReferences(StructureFeature<?> structure) {
-        return null;
-    }
-
-    @Override
-    public void addStructureReference(StructureFeature<?> structure, long reference) {
-
-    }
-
-    @Override
-    public Map<StructureFeature<?>, LongSet> getStructureReferences() {
-        return null;
-    }
-
-    @Override
-    public void setStructureReferences(Map<StructureFeature<?>, LongSet> structureReferences) {
+    public void setStructureReferences(Map<ConfiguredStructureFeature<?, ?>, LongSet> structureReferences) {
 
     }
 

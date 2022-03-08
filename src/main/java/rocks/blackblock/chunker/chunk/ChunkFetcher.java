@@ -16,6 +16,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.server.world.ThreadedAnvilChunkStorage;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.BiomeKeys;
@@ -180,7 +181,7 @@ public class ChunkFetcher {
 
                 ChunkSection[] sections = new ChunkSection[vertical_section_count];
 
-                PalettedContainer<Biome> palettedContainer2;
+                PalettedContainer<RegistryEntry<Biome>> palettedContainer2;
                 Object palettedContainer;
                 Registry<Biome> registry = world.getRegistryManager().get(Registry.BIOME_KEY);
                 Codec<PalettedContainer<Biome>> codec = createCodec(registry);
@@ -192,8 +193,8 @@ public class ChunkFetcher {
 
                     if (l >= 0 && l < sections.length) {
                         palettedContainer = sectionTag.contains("block_states", 10) ? (PalettedContainer)CODEC.parse(NbtOps.INSTANCE, sectionTag.getCompound("block_states")).promotePartial(errorMessage -> logRecoverableError(pos, y, errorMessage)).getOrThrow(false, LOGGER::error) : new PalettedContainer(Block.STATE_IDS, Blocks.AIR.getDefaultState(), PalettedContainer.PaletteProvider.BLOCK_STATE);
-                        palettedContainer2 = sectionTag.contains("biomes", 10) ? (PalettedContainer)codec.parse(NbtOps.INSTANCE, sectionTag.getCompound("biomes")).promotePartial(errorMessage -> logRecoverableError(pos, y, errorMessage)).getOrThrow(false, LOGGER::error) : new PalettedContainer<Biome>(registry, registry.getOrThrow(BiomeKeys.PLAINS), PalettedContainer.PaletteProvider.BIOME);
-                        ChunkSection chunkSection = new ChunkSection(y, (PalettedContainer<BlockState>)palettedContainer, (PalettedContainer<Biome>)palettedContainer2);
+                        palettedContainer2 = sectionTag.contains("biomes", 10) ? (PalettedContainer)codec.parse(NbtOps.INSTANCE, sectionTag.getCompound("biomes")).promotePartial(errorMessage -> logRecoverableError(pos, y, errorMessage)).getOrThrow(false, LOGGER::error) : new PalettedContainer<RegistryEntry<Biome>>(registry.getIndexedEntries(), registry.entryOf(BiomeKeys.PLAINS), PalettedContainer.PaletteProvider.BIOME);
+                        ChunkSection chunkSection = new ChunkSection(y, (PalettedContainer<BlockState>)palettedContainer, palettedContainer2);
                         chunkSection.calculateCounts();
                         sections[l] = chunkSection;
                     }

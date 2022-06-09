@@ -26,6 +26,7 @@ import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.PalettedContainer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
 import rocks.blackblock.chunker.TileGenerator;
 import rocks.blackblock.chunker.mixin.MinecraftServerAccessor;
 import rocks.blackblock.chunker.mixin.ThreadedAnvilChunkStorageMixin;
@@ -33,6 +34,8 @@ import rocks.blackblock.chunker.mixin.ThreadedAnvilChunkStorageMixin;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * This class is a fetcher of chunks. These can be loaded or unloaded.
@@ -46,11 +49,12 @@ public class ChunkFetcher {
     private final ServerWorld world;
     private final ThreadedAnvilChunkStorage tacs;
 
-    private static final Codec<PalettedContainer<BlockState>> CODEC = PalettedContainer.createCodec(Block.STATE_IDS, BlockState.CODEC, PalettedContainer.PaletteProvider.BLOCK_STATE, Blocks.AIR.getDefaultState());
+    // Method should (also) be called `createCodec` isntead of method_44343
+    private static final Codec<PalettedContainer<BlockState>> CODEC = PalettedContainer.method_44343(Block.STATE_IDS, BlockState.CODEC, PalettedContainer.PaletteProvider.BLOCK_STATE, Blocks.AIR.getDefaultState());
     private static final Logger LOGGER = LogManager.getLogger();
 
     private static Codec<PalettedContainer<Biome>> createCodec(Registry<Biome> biomeRegistry) {
-        return PalettedContainer.createCodec(biomeRegistry, biomeRegistry.getCodec(), PalettedContainer.PaletteProvider.BIOME, biomeRegistry.getOrThrow(BiomeKeys.PLAINS));
+        return PalettedContainer.method_44343(biomeRegistry, biomeRegistry.getCodec(), PalettedContainer.PaletteProvider.BIOME, biomeRegistry.getOrThrow(BiomeKeys.PLAINS));
     }
 
     private static void logRecoverableError(ChunkPos chunkPos, int y, String message) {
@@ -125,12 +129,14 @@ public class ChunkFetcher {
                     // Attempt to get it's NBT
                     try {
                         ChunkPos pos = new ChunkPos(chunkOriginX + chunkOffX, chunkOriginZ + chunkOffZ);
-                        NbtCompound chunkTag = tacs.getNbt(pos);
+                        CompletableFuture<Optional<NbtCompound>> chunkTag = tacs.getNbt(pos);
                         if (chunkTag != null) {
-                            unloadedChunkCachedData.put(pos.toLong(), chunkTag);
-                            return true;
+                            // @TODO: Again: this nbtcompound is in a promise. We need to wait for it to be resolved
+                            //unloadedChunkCachedData.put(pos.toLong(), chunkTag);
+                            //return true;
+                            return false;
                         }
-                    } catch (IOException e) {
+                    } catch (Exception e) {
                         // TODO: better logging
                         e.printStackTrace();
                         return false;
@@ -141,6 +147,7 @@ public class ChunkFetcher {
             return false;
         }
 
+        @Nullable
         public Chunk getChunkView(int x, int z) {
             if (world.isChunkLoaded(x, z)) {
                 return world.getChunk(x, z);
@@ -149,9 +156,11 @@ public class ChunkFetcher {
                 NbtCompound chunkData = unloadedChunkCachedData.remove(pos.toLong());
                 if (chunkData == null) {
                     try {
-                        // TODO: cache??
-                        chunkData = ((ThreadedAnvilChunkStorageMixin) tacs).callGetUpdatedChunkNbt(pos);
-                    } catch (IOException e) {
+                        // @TODO: cache??
+                        // @TODO: Since 1.19 this returns a promise, so we need to wait for it to be resolved
+                        //chunkData = ((ThreadedAnvilChunkStorageMixin) tacs).callGetUpdatedChunkNbt(pos);
+                        chunkData = null;
+                    } catch (Exception e) {
                         // TODO: better logging
                         e.printStackTrace();
                         return null;

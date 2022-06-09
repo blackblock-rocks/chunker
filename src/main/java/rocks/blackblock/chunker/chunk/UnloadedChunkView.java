@@ -1,6 +1,5 @@
 package rocks.blackblock.chunker.chunk;
 
-import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.shorts.ShortList;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -11,7 +10,6 @@ import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.structure.StructureStart;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.registry.Registry;
@@ -21,7 +19,6 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.UpgradeData;
-import net.minecraft.world.gen.feature.ConfiguredStructureFeature;
 import net.minecraft.world.tick.BasicTickScheduler;
 import org.jetbrains.annotations.Nullable;
 
@@ -151,16 +148,6 @@ public class UnloadedChunkView extends Chunk {
     }
 
     @Override
-    public Map<ConfiguredStructureFeature<?, ?>, StructureStart> getStructureStarts() {
-        return null;
-    }
-
-    @Override
-    public void setStructureStarts(Map<ConfiguredStructureFeature<?, ?>, StructureStart> structureStarts) {
-
-    }
-
-    @Override
     public boolean needsSaving() {
         return false;
     }
@@ -232,16 +219,6 @@ public class UnloadedChunkView extends Chunk {
 
     @Override
     public void setLightOn(boolean lightOn) {
-
-    }
-
-    @Override
-    public Map<ConfiguredStructureFeature<?, ?>, LongSet> getStructureReferences() {
-        return null;
-    }
-
-    @Override
-    public void setStructureReferences(Map<ConfiguredStructureFeature<?, ?>, LongSet> structureReferences) {
 
     }
 

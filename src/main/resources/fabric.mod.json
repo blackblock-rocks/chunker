@@ -25,10 +25,11 @@
   "mixins": [
     "chunker.mixins.json"
   ],
+  "accessWidener": "chunker.accesswidener",
   "depends": {
-    "fabricloader": ">=0.11.3",
+    "fabricloader": ">=0.14.0",
     "fabric": "*",
-    "minecraft": "1.18.x",
+    "minecraft": "1.19.x",
     "java": ">=17"
   },
   "suggests": {

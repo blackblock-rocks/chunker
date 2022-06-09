@@ -7,9 +7,11 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
 import java.io.IOException;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 @Mixin(ThreadedAnvilChunkStorage.class)
 public interface ThreadedAnvilChunkStorageMixin {
     @Invoker
-    NbtCompound callGetUpdatedChunkNbt (ChunkPos pos) throws IOException;
+    CompletableFuture<Optional<NbtCompound>> callGetUpdatedChunkNbt (ChunkPos pos) throws IOException;
 }

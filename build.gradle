@@ -1,5 +1,5 @@
 plugins {
-	id 'fabric-loom' version '0.10-SNAPSHOT'
+	id 'fabric-loom' version '0.12-SNAPSHOT'
 	id 'maven-publish'
 }
 
@@ -34,6 +34,10 @@ processResources {
 	filesMatching("fabric.mod.json") {
 		expand "version": project.version
 	}
+}
+
+loom {
+	accessWidenerPath = file("src/main/resources/chunker.accesswidener")
 }
 
 tasks.withType(JavaCompile).configureEach {

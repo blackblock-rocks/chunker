@@ -36,13 +36,17 @@ public class Plane {
 
         if (world instanceof ServerWorld) {
             this.world = (ServerWorld) world;
-        } else {
+        } else if (Chunker.SERVER != null) {
             for (ServerWorld server_world : Chunker.SERVER.getWorlds()) {
                 if (server_world.getRegistryKey().getValue().equals(world.getRegistryKey().getValue())) {
                     this.world = server_world;
                     break;
                 }
             }
+        }
+
+        if (this.world == null) {
+            return;
         }
 
         this.dimension = this.world.getDimension();

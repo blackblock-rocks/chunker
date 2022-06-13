@@ -15,7 +15,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkStatus;
 import rocks.blackblock.chunker.chunk.ChunkFetcher;
-import rocks.blackblock.chunker.chunk.ChunkFetcher.Session;
+
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;

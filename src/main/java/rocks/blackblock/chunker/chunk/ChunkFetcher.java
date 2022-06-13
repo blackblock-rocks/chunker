@@ -26,13 +26,13 @@ import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.PalettedContainer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import rocks.blackblock.chunker.TileGenerator;
 import rocks.blackblock.chunker.mixin.MinecraftServerAccessor;
 import rocks.blackblock.chunker.mixin.ThreadedAnvilChunkStorageMixin;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -40,13 +40,20 @@ import java.util.concurrent.CompletableFuture;
 /**
  * This class is a fetcher of chunks. These can be loaded or unloaded.
  *
- * @since   0.1.0
+ * @since     0.1.0
+ * @version   0.2.0
  */
 public class ChunkFetcher {
 
     private final LongSet validRegions = new LongOpenHashSet();
+
+    // The path to the region folder
     private final File regionFolder;
+
+    // The world to get chunks for
     private final ServerWorld world;
+
+    // The TACS in use by this world
     private final ThreadedAnvilChunkStorage tacs;
 
     // Method should (also) be called `createCodec` isntead of method_44343
@@ -61,17 +68,36 @@ public class ChunkFetcher {
         LOGGER.error("Recoverable errors when loading section [" + chunkPos.x + ", " + y + ", " + chunkPos.z + "]: " + message);
     }
 
+    /**
+     * Initialize the new ChunkFetcher
+     *
+     * @author   Jelle De Loecker   <jelle@elevenways.be>
+     * @since    0.1.0
+     *
+     * @param    server   The server instance
+     * @param    world    The world to get chunks from
+     */
     public ChunkFetcher(MinecraftServer server, ServerWorld world) {
-        regionFolder = new File(((MinecraftServerAccessor) server).getSession().getWorldDirectory(world.getRegistryKey()).toFile(), "region");
+        this.regionFolder = new File(((MinecraftServerAccessor) server).getSession().getWorldDirectory(world.getRegistryKey()).toFile(), "region");
         this.world = world;
         this.tacs = world.getChunkManager().threadedAnvilChunkStorage;
     }
 
-    // Thread-local session of BlockDigger
+    /**
+     * Thread-local session of a ChunkFetcher
+     *
+     * @author   Jelle De Loecker   <jelle@elevenways.be>
+     * @since    0.1.0
+     */
     public class Session {
         // Saved in testTileExists - as this data will be read again when rendering the chunk, might as well only read it once
         private final Long2ObjectMap<NbtCompound> unloadedChunkCachedData = new Long2ObjectOpenHashMap<>();
 
+        /**
+         * See if the tile exists
+         *
+         * @since   0.1.0
+         */
         public boolean testTileExists(int tileX, int tileZ, int zoomShift) {
             int regionSize = TileGenerator.rightShiftButReversible(1, TileGenerator.TILE_TO_REGION_SHIFT - zoomShift);
             if (regionSize < 1) {
@@ -147,80 +173,158 @@ public class ChunkFetcher {
             return false;
         }
 
+        /**
+         * Get a Chunk from this world.
+         * This can be a loaded chunk, or an unloaded chunk that we got earlier.
+         * If the chunk is not loaded, it will not be fetched because that has to happen asynchronously.
+         *
+         * @author   Jelle De Loecker   <jelle@elevenways.be>
+         * @since    0.1.0
+         *
+         * @param    chunk_x   The chunk x coordinate
+         * @param    chunk_z   The chunk z coordinate
+         */
         @Nullable
-        public Chunk getChunkView(int x, int z) {
-            if (world.isChunkLoaded(x, z)) {
-                return world.getChunk(x, z);
-            } else {
-                ChunkPos pos = new ChunkPos(x, z);
-                NbtCompound chunkData = unloadedChunkCachedData.remove(pos.toLong());
-                if (chunkData == null) {
-                    try {
-                        // @TODO: cache??
-                        // @TODO: Since 1.19 this returns a promise, so we need to wait for it to be resolved
-                        //chunkData = ((ThreadedAnvilChunkStorageMixin) tacs).callGetUpdatedChunkNbt(pos);
-                        chunkData = null;
-                    } catch (Exception e) {
-                        // TODO: better logging
-                        e.printStackTrace();
-                        return null;
-                    }
-                    if (chunkData == null) {
-                        return null;
-                    }
-                }
+        public Chunk getChunkView(int chunk_x, int chunk_z) {
 
-                NbtCompound level = chunkData.getCompound("Level");
-
-                ChunkStatus status = ChunkStatus.byId(chunkData.getString("Status"));
-
-                // We only want to render fully generated chunks
-                if (!status.isAtLeast(ChunkStatus.FULL)) {
-
-                    // Chunks that have been updated via a DFU however are marked as "EMPTY",
-                    // but actually contain all the data needed to render the map
-                    if (!status.equals(ChunkStatus.EMPTY)) {
-                        return null;
-                    }
-                }
-
-                NbtList sectionList = chunkData.getList("sections", 10);
-
-                int vertical_section_count = world.countVerticalSections();
-
-                ChunkSection[] sections = new ChunkSection[vertical_section_count];
-
-                PalettedContainer<RegistryEntry<Biome>> palettedContainer2;
-                Object palettedContainer;
-                Registry<Biome> registry = world.getRegistryManager().get(Registry.BIOME_KEY);
-                Codec<PalettedContainer<Biome>> codec = createCodec(registry);
-
-                for (int i = 0; i < sectionList.size(); ++i) {
-                    NbtCompound sectionTag = sectionList.getCompound(i);
-                    int y = sectionTag.getByte("Y");
-                    int l = world.sectionCoordToIndex(y);
-
-                    if (l >= 0 && l < sections.length) {
-                        palettedContainer = sectionTag.contains("block_states", 10) ? (PalettedContainer)CODEC.parse(NbtOps.INSTANCE, sectionTag.getCompound("block_states")).promotePartial(errorMessage -> logRecoverableError(pos, y, errorMessage)).getOrThrow(false, LOGGER::error) : new PalettedContainer(Block.STATE_IDS, Blocks.AIR.getDefaultState(), PalettedContainer.PaletteProvider.BLOCK_STATE);
-                        palettedContainer2 = sectionTag.contains("biomes", 10) ? (PalettedContainer)codec.parse(NbtOps.INSTANCE, sectionTag.getCompound("biomes")).promotePartial(errorMessage -> logRecoverableError(pos, y, errorMessage)).getOrThrow(false, LOGGER::error) : new PalettedContainer<RegistryEntry<Biome>>(registry.getIndexedEntries(), registry.entryOf(BiomeKeys.PLAINS), PalettedContainer.PaletteProvider.BIOME);
-                        ChunkSection chunkSection = new ChunkSection(y, (PalettedContainer<BlockState>)palettedContainer, palettedContainer2);
-                        chunkSection.calculateCounts();
-                        sections[l] = chunkSection;
-                    }
-                }
-
-                Chunk unloadedChunkView = new UnloadedChunkView(sections, world, pos);
-
-                NbtCompound heightmaps = level.getCompound("Heightmaps");
-                String heightmapName = Heightmap.Type.WORLD_SURFACE.getName();
-                if (heightmaps.contains(heightmapName, 12)) {
-                    unloadedChunkView.setHeightmap(Heightmap.Type.WORLD_SURFACE, heightmaps.getLongArray(heightmapName));
-                } else {
-                    Heightmap.populateHeightmaps(unloadedChunkView, Collections.singleton(Heightmap.Type.WORLD_SURFACE));
-                }
-
-                return unloadedChunkView;
+            // If the chunk is already loaded, it's an easy return!
+            if (world.isChunkLoaded(chunk_x, chunk_z)) {
+                return world.getChunk(chunk_x, chunk_z);
             }
+
+            return null;
+        }
+
+        /**
+         * Get a Future for a Chunk from this world.
+         * This can be a loaded chunk, or an unloaded chunk.
+         *
+         * @author   Jelle De Loecker   <jelle@elevenways.be>
+         * @since    0.1.0
+         *
+         * @param    chunk_x   The chunk x coordinate
+         * @param    chunk_z   The chunk z coordinate
+         */
+        @NotNull
+        public CompletableFuture<Optional<Chunk>> getChunkViewAsync(int chunk_x, int chunk_z) {
+
+            CompletableFuture<Optional<Chunk>> result = new CompletableFuture<>();
+
+            // If the chunk is already loaded, it's an easy return!
+            if (world.isChunkLoaded(chunk_x, chunk_z)) {
+                Chunk chunk = world.getChunk(chunk_x, chunk_z);
+                result.complete(Optional.of(chunk));
+                return result;
+            }
+
+            // Create the position to the chunk
+            ChunkPos pos = new ChunkPos(chunk_x, chunk_z);
+
+            // See if the Chunk's NBT data is already in memory
+            NbtCompound chunk_nbt = unloadedChunkCachedData.remove(pos.toLong());
+
+            // Create another future for this
+            CompletableFuture<Optional<NbtCompound>> chunk_nbt_future = null;
+
+            if (chunk_nbt == null) {
+                try {
+                    chunk_nbt_future = ((ThreadedAnvilChunkStorageMixin) tacs).callGetUpdatedChunkNbt(pos);
+                } catch (Exception e) {
+                    // TODO: better logging
+                    e.printStackTrace();
+                }
+
+                if (chunk_nbt_future == null) {
+                    result.complete(Optional.empty());
+                    return result;
+                }
+            } else {
+                // Create a dummy future for the nbt data we already found
+                chunk_nbt_future = CompletableFuture.completedFuture(Optional.of(chunk_nbt));
+            }
+
+            // Wait for the actual chunk NBT data
+            result = chunk_nbt_future.thenApply(optional_nbt -> {
+
+                // It's not there, so no chunk data found!
+                if (optional_nbt.isEmpty()) {
+                    return Optional.empty();
+                }
+
+                // Parse the chunk nbt and make it return an optional chunk
+                Optional<UnloadedChunkView> chunk_from_nbt_option = this.getChunkFromNbt(optional_nbt.get(), pos);
+
+                // If the chunk is not there, return an empty optional
+                return chunk_from_nbt_option.map(unloadedChunkView -> (Chunk) unloadedChunkView);
+
+            });
+
+            return result;
+        }
+
+        /**
+         * Try to get a Chunk instance from the given chunk data
+         *
+         * @author   Jelle De Loecker   <jelle@elevenways.be>
+         * @since    0.2.0
+         *
+         * @param    chunk_nbt   The chunk NBT data
+         * @param    pos         The chunk position
+         */
+        @NotNull
+        private Optional<UnloadedChunkView> getChunkFromNbt(NbtCompound chunk_nbt, ChunkPos pos) {
+
+            NbtCompound level = chunk_nbt.getCompound("Level");
+            ChunkStatus status = ChunkStatus.byId(chunk_nbt.getString("Status"));
+
+            // We only want fully generated chunks
+            if (!status.isAtLeast(ChunkStatus.FULL)) {
+
+                // Chunks that have been updated via a DFU however are marked as "EMPTY",
+                // but actually contain all the data needed to render the map
+                if (!status.equals(ChunkStatus.EMPTY)) {
+                    return Optional.empty();
+                }
+            }
+
+            // Get all the chunk sections from the NBT data
+            NbtList chunk_sections = chunk_nbt.getList("sections", 10);
+
+            // Get the amount of vertical sections in this world
+            int vertical_section_count = world.countVerticalSections();
+
+            ChunkSection[] sections = new ChunkSection[vertical_section_count];
+
+            PalettedContainer<RegistryEntry<Biome>> palettedContainer2;
+            Object palettedContainer;
+            Registry<Biome> registry = world.getRegistryManager().get(Registry.BIOME_KEY);
+            Codec<PalettedContainer<Biome>> codec = createCodec(registry);
+
+            for (int i = 0; i < chunk_sections.size(); ++i) {
+                NbtCompound sectionTag = chunk_sections.getCompound(i);
+                int y = sectionTag.getByte("Y");
+                int l = world.sectionCoordToIndex(y);
+
+                if (l >= 0 && l < sections.length) {
+                    palettedContainer = sectionTag.contains("block_states", 10) ? (PalettedContainer)CODEC.parse(NbtOps.INSTANCE, sectionTag.getCompound("block_states")).promotePartial(errorMessage -> logRecoverableError(pos, y, errorMessage)).getOrThrow(false, LOGGER::error) : new PalettedContainer(Block.STATE_IDS, Blocks.AIR.getDefaultState(), PalettedContainer.PaletteProvider.BLOCK_STATE);
+                    palettedContainer2 = sectionTag.contains("biomes", 10) ? (PalettedContainer)codec.parse(NbtOps.INSTANCE, sectionTag.getCompound("biomes")).promotePartial(errorMessage -> logRecoverableError(pos, y, errorMessage)).getOrThrow(false, LOGGER::error) : new PalettedContainer<RegistryEntry<Biome>>(registry.getIndexedEntries(), registry.entryOf(BiomeKeys.PLAINS), PalettedContainer.PaletteProvider.BIOME);
+                    ChunkSection chunkSection = new ChunkSection(y, (PalettedContainer<BlockState>)palettedContainer, palettedContainer2);
+                    chunkSection.calculateCounts();
+                    sections[l] = chunkSection;
+                }
+            }
+
+            UnloadedChunkView unloadedChunkView = new UnloadedChunkView(sections, world, pos);
+
+            NbtCompound heightmaps = level.getCompound("Heightmaps");
+            String heightmapName = Heightmap.Type.WORLD_SURFACE.getName();
+            if (heightmaps.contains(heightmapName, 12)) {
+                unloadedChunkView.setHeightmap(Heightmap.Type.WORLD_SURFACE, heightmaps.getLongArray(heightmapName));
+            } else {
+                Heightmap.populateHeightmaps(unloadedChunkView, Collections.singleton(Heightmap.Type.WORLD_SURFACE));
+            }
+
+            return Optional.of(unloadedChunkView);
         }
     }
 }

@@ -1,11 +1,13 @@
 package rocks.blackblock.chunker.chunk;
 
-import net.minecraft.block.BlockState;
 import net.minecraft.block.MapColor;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.chunk.Chunk;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import rocks.blackblock.chunker.Chunker;
 import rocks.blackblock.chunker.TileGenerator;
 import rocks.blackblock.chunker.world.Plane;
 
@@ -17,6 +19,8 @@ import java.awt.image.Raster;
 import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * A wrapper class for working with chunks
@@ -25,18 +29,21 @@ import java.nio.file.Path;
  */
 public class Lump {
 
+    @NotNull
     private final Chunk chunk;
+
+    @Nullable
     private final Plane plane;
 
-    private int x;
-    private int z;
+    private Integer x;
+    private Integer z;
 
     /**
      * Creates a new Lump with the given chunk
      *
      * @param   chunk   The chunk instance to use
      */
-    public Lump(Chunk chunk) {
+    public Lump(@NotNull Chunk chunk) {
         this(chunk, null);
     }
 
@@ -45,9 +52,13 @@ public class Lump {
      *
      * @param   chunk   The chunk instance to use
      */
-    public Lump(Chunk chunk, Plane plane) {
+    public Lump(@NotNull Chunk chunk, @Nullable Plane plane) {
         this.chunk = chunk;
         this.plane = plane;
+
+        ChunkPos pos = chunk.getPos();
+        this.x = pos.x;
+        this.z = pos.z;
     }
 
     /**
@@ -66,7 +77,7 @@ public class Lump {
      *
      * @since   0.1.0
      */
-    public Chunk getChunk() {
+    public @NotNull Chunk getChunk() {
         return this.chunk;
     }
 
@@ -75,7 +86,7 @@ public class Lump {
      *
      * @since   0.1.0
      */
-    public Plane getPlane() {
+    public @Nullable Plane getPlane() {
         return this.plane;
     }
 
@@ -86,9 +97,16 @@ public class Lump {
      *
      * @since   0.1.0
      */
-    public void forceLoad(boolean enable) {
+    public boolean forceLoad(boolean enable) {
+
+        if (this.plane == null) {
+            return false;
+        }
+
         ServerWorld world = this.plane.getWorld();
         world.setChunkForced(this.x, this.z, enable);
+
+        return true;
     }
 
     /**
@@ -97,6 +115,11 @@ public class Lump {
      * @since   0.1.0
      */
     public boolean isForceLoaded() {
+
+        if (this.plane == null) {
+            return false;
+        }
+
         ServerWorld world = this.plane.getWorld();
         long pos_long = this.getPos().toLong();
         return world.getForcedChunks().contains(pos_long);
@@ -123,7 +146,32 @@ public class Lump {
     }
 
     /**
-     * Get a neighbouring lump
+     * Preload a neighbour
+     *
+     * @param x The X-shift of the wanted neighbour
+     * @param z The Z-shift of the wanted neighbour
+     * @author Jelle De Loecker   <jelle@elevenways.be>
+     * @since 0.2.0
+     */
+    public @NotNull CompletableFuture<Optional<Lump>> preloadNeighbour(int x, int z) {
+
+        // Return null if no plane was set
+        // Return null if both coordinates are 0
+        if (this.plane == null || (x == 0 && z == 0)) {
+            return null;
+        }
+
+        int wanted_x = this.x + x;
+        int wanted_z = this.z + z;
+
+        System.out.println("Preloading neighbour " + wanted_x + " " + wanted_z);
+
+        return this.plane.preloadLump(wanted_x, wanted_z);
+    }
+
+    /**
+     * Get a neighbouring lump.
+     * This would have to be loaded or pre-fetched.
      *
      * @param  x   The X-shift of the wanted neighbour
      * @param  z   The Z-shift of the wanted neighbour
@@ -173,21 +221,34 @@ public class Lump {
     }
 
     /**
-     * Get the colors of this chunk
+     * Get the colors of this asynchronously
      *
-     * @since   0.1.0
+     * @author   Jelle De Loecker   <jelle@elevenways.be>
+     * @since    0.2.0
+     */
+    public CompletableFuture<int[]> getColorsAsync() {
+        return this.preloadNeighbour(0, -1).thenApplyAsync(lump -> this.getColors());
+    }
+
+    /**
+     * Get the colors of this chunk in ABGR format
+     *
+     * @author   Jelle De Loecker   <jelle@elevenways.be>
+     * @since    0.1.0
      */
     public int[] getColors() {
+
+        if (this.plane == null) {
+            return null;
+        }
 
         // The resulting colors array
         int[] colors = new int[16 * 16];
 
-        Heightmap heightmap = chunk.getHeightmap(Heightmap.Type.WORLD_SURFACE);
         boolean has_ceiling = this.plane.hasCeiling();
 
         // Get the chunk north of this chunk for shading
         Lump north = this.getNeighbour(0, -1);
-        Heightmap north_heightmap = north != null ? north.getChunk().getHeightmap(Heightmap.Type.WORLD_SURFACE) : null;
 
         // The last height values
         int[] last_heights = new int[16];
@@ -257,6 +318,24 @@ public class Lump {
         }
 
         return colors;
+    }
+
+    /**
+     * Convert pixels from java default ABGR int format to byte array in ARGB
+     * format.
+     *
+     * @param pixels the pixels to convert
+     */
+    public static void convertABGRtoARGB(int[] pixels) {
+        int p, r, g, b, a;
+        for (int i = 0; i < pixels.length; i++) {
+            p = pixels[i];
+            a = (p >> 24) & 0xFF; // get pixel bytes in ARGB order
+            b = (p >> 16) & 0xFF;
+            g = (p >> 8) & 0xFF;
+            r = (p >> 0) & 0xFF;
+            pixels[i] = (a << 24) | (r << 16) | (g << 8) | (b << 0);
+        }
     }
 
 }

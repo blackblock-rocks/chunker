@@ -7,12 +7,17 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.dimension.DimensionType;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import rocks.blackblock.chunker.Chunker;
 import rocks.blackblock.chunker.chunk.ChunkFetcher;
 import rocks.blackblock.chunker.chunk.ChunkFetcher.Session;
 import rocks.blackblock.chunker.chunk.Lump;
+import rocks.blackblock.chunker.utils.LRUCache;
 
 import java.awt.*;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * A wrapper class for working with worlds
@@ -24,6 +29,7 @@ public class Plane {
     private ServerWorld world;
     private DimensionType dimension;
     private ChunkFetcher.Session fetcher = null;
+    private LRUCache<ChunkPos, Lump> preload_cache = new LRUCache<>(128);
 
     /**
      * Creates a new Plane with the given World
@@ -50,6 +56,21 @@ public class Plane {
         }
 
         this.dimension = this.world.getDimension();
+    }
+
+    /**
+     * Make sure the chunk fetcher has been made
+     *
+     * @author   Jelle De Loecker   <jelle@elevenways.be>
+     * @since    0.2.0
+     */
+    private ChunkFetcher.Session getFetcherSession() {
+
+        if (this.fetcher == null) {
+            this.fetcher = new ChunkFetcher(Chunker.SERVER, world).new Session();
+        }
+
+        return this.fetcher;
     }
 
     /**
@@ -136,40 +157,81 @@ public class Plane {
     }
 
     /**
+     * Preload a lump
+     *
+     * @author   Jelle De Loecker   <jelle@elevenways.be>
+     * @since    0.2.0
+     *
+     * @param   chunk_pos   The position of the chunk to preload
+     */
+    public CompletableFuture<Optional<Lump>> preloadLump(ChunkPos chunk_pos) {
+
+        if (this.preload_cache.containsKey(chunk_pos)) {
+            return CompletableFuture.completedFuture(Optional.of(this.preload_cache.get(chunk_pos)));
+        }
+
+        CompletableFuture<Optional<Chunk>> future = this.getFetcherSession().getChunkViewAsync(chunk_pos.x, chunk_pos.z);
+        return future.thenApplyAsync(optional_chunk -> optional_chunk.map(chunk -> {
+            Lump result = new Lump(chunk, this);
+
+            this.preload_cache.put(chunk_pos, result);
+
+            return result;
+        }));
+    }
+
+    /**
+     * Preload a lump
+     *
+     * @author   Jelle De Loecker   <jelle@elevenways.be>
+     * @since    0.2.0
+     *
+     * @param   x   The chunk's X position
+     * @param   z   The chunk's Z position
+     */
+    @NotNull
+    public CompletableFuture<Optional<Lump>> preloadLump(int x, int z) {
+        return this.preloadLump(new ChunkPos(x, z));
+    }
+
+    /**
      * Get a Lump chunk from this plane
      *
      * @param   chunk_pos
      *
      * @since   0.1.0
      */
+    @Nullable
     public Lump getLump(ChunkPos chunk_pos) {
-        return getLump(chunk_pos.x, chunk_pos.z);
-    }
 
-    /**
-     * Get a Lump chunk from this plane
-     *
-     * @param   x   The chunk's X position
-     * @param   z   The chunk's Z position
-     *
-     * @since   0.1.0
-     */
-    public Lump getLump(int x, int z) {
-
-        if (fetcher == null) {
-            fetcher = new ChunkFetcher(Chunker.SERVER, world).new Session();
+        if (this.preload_cache.containsKey(chunk_pos)) {
+            return this.preload_cache.get(chunk_pos);
         }
 
-        Chunk chunk = fetcher.getChunkView(x, z);
+        Chunk chunk = this.getFetcherSession().getChunkView(chunk_pos.x, chunk_pos.z);
 
         if (chunk == null) {
             return null;
         }
 
         Lump result = new Lump(chunk, this);
-        result.setCoordinates(x, z);
+        result.setCoordinates(chunk_pos.x, chunk_pos.z);
 
         return result;
+    }
+
+    /**
+     * Get a Lump chunk from this plane.
+     * Will only return a Lump that's actively loaded or pre-loaded.
+     *
+     * @param   x   The chunk's X position
+     * @param   z   The chunk's Z position
+     *
+     * @since   0.1.0
+     */
+    @Nullable
+    public Lump getLump(int x, int z) {
+        return getLump(new ChunkPos(x, z));
     }
 
     /**

@@ -35,12 +35,14 @@ public class UnloadedChunkView extends Chunk {
     private final ChunkSection[] sections;
     private final World world;
     private final Heightmap worldSurfaceHeightmap;
+    private final ChunkPos pos;
 
     UnloadedChunkView(ChunkSection[] sections, World world, ChunkPos pos) {
         super(pos, UpgradeData.NO_UPGRADE_DATA, world, world.getRegistryManager().get(Registry.BIOME_KEY), 0, null, null);
         this.sections = sections;
         this.world = world;
         this.worldSurfaceHeightmap = new Heightmap(this, Heightmap.Type.WORLD_SURFACE);
+        this.pos = pos;
     }
 
     @Override
@@ -144,7 +146,7 @@ public class UnloadedChunkView extends Chunk {
 
     @Override
     public ChunkPos getPos() {
-        return null;
+        return this.pos;
     }
 
     @Override

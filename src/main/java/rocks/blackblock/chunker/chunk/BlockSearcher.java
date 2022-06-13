@@ -50,11 +50,14 @@ public class BlockSearcher {
      * @since   0.1.0
      */
     private void setLump(Lump lump) {
-        if (this.lump != lump) {
-            this.lump = lump;
-            this.heightmap = null;
-            this.block_state = null;
+
+        if (this.lump != null && this.lump == lump) {
+            return;
         }
+
+        this.lump = lump;
+        this.heightmap = null;
+        this.block_state = null;
     }
 
     /**

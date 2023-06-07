@@ -12,8 +12,6 @@ public class Chunker implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		LOGGER.info("Chunker is loaded!");
-
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> SERVER = server);
 		ServerLifecycleEvents.SERVER_STOPPING.register(server -> SERVER = null);
 	}

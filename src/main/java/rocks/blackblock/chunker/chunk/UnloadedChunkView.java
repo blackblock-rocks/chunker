@@ -10,9 +10,9 @@ import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
@@ -26,7 +26,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Stream;
 
 /**
  * Skeleton implementation of Chunk to represent an unloaded chunk view
@@ -38,7 +37,7 @@ public class UnloadedChunkView extends Chunk {
     private final ChunkPos pos;
 
     UnloadedChunkView(ChunkSection[] sections, World world, ChunkPos pos) {
-        super(pos, UpgradeData.NO_UPGRADE_DATA, world, world.getRegistryManager().get(Registry.BIOME_KEY), 0, null, null);
+        super(pos, UpgradeData.NO_UPGRADE_DATA, world, world.getRegistryManager().get(RegistryKeys.BIOME), 0, null, null);
         this.sections = sections;
         this.world = world;
         this.worldSurfaceHeightmap = new Heightmap(this, Heightmap.Type.WORLD_SURFACE);
@@ -176,11 +175,6 @@ public class UnloadedChunkView extends Chunk {
 
     @Override
     public @Nullable NbtCompound getPackedBlockEntityNbt(BlockPos pos) {
-        return null;
-    }
-
-    @Override
-    public Stream<BlockPos> getLightSourcesStream() {
         return null;
     }
 

@@ -3,11 +3,9 @@ package rocks.blackblock.chunker.chunk;
 import net.minecraft.block.MapColor;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.Heightmap;
 import net.minecraft.world.chunk.Chunk;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import rocks.blackblock.chunker.Chunker;
 import rocks.blackblock.chunker.TileGenerator;
 import rocks.blackblock.chunker.world.Plane;
 
@@ -163,8 +161,6 @@ public class Lump {
 
         int wanted_x = this.x + x;
         int wanted_z = this.z + z;
-
-        System.out.println("Preloading neighbour " + wanted_x + " " + wanted_z);
 
         return this.plane.preloadLump(wanted_x, wanted_z);
     }

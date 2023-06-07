@@ -170,8 +170,11 @@ public class Plane {
             return CompletableFuture.completedFuture(Optional.of(this.preload_cache.get(chunk_pos)));
         }
 
-        CompletableFuture<Optional<Chunk>> future = this.getFetcherSession().getChunkViewAsync(chunk_pos.x, chunk_pos.z);
+        ChunkFetcher.Session session = this.getFetcherSession();
+        CompletableFuture<Optional<Chunk>> future = session.getChunkViewAsync(chunk_pos.x, chunk_pos.z);
+
         return future.thenApplyAsync(optional_chunk -> optional_chunk.map(chunk -> {
+
             Lump result = new Lump(chunk, this);
 
             this.preload_cache.put(chunk_pos, result);

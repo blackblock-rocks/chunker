@@ -7,6 +7,7 @@ import net.minecraft.fluid.FluidState;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.Heightmap;
+import rocks.blackblock.chunker.Chunker;
 import rocks.blackblock.chunker.world.Plane;
 
 public class BlockSearcher {
@@ -150,7 +151,7 @@ public class BlockSearcher {
         Heightmap heightmap = this.getHeightmap();
 
         // Get the top, non-air block Y level
-        this.height = heightmap.get(x & 15, z & 15);
+        this.height = heightmap.get(x & 15, z & 15) - 1;
 
         // Remember the initial height
         int initial_height = this.height;
@@ -158,7 +159,7 @@ public class BlockSearcher {
         // Keep track of when we broke through the ceiling
         boolean broke_though_ceiling = false;
 
-        this.pos.set(lump.convertLocalCoordinateToGlobal(x), this.height, lump.convertLocalCoordinateToGlobal(z));
+        this.pos.set(lump.convertLocalCoordinateToGlobal(x), initial_height, lump.convertLocalCoordinateToGlobal(z));
 
         BlockState first_block_state = this.lump.getChunk().getBlockState(this.pos);
         this.block_state = first_block_state;

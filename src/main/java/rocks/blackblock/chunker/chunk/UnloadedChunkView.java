@@ -11,6 +11,7 @@ import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.Heightmap;
@@ -173,8 +174,9 @@ public class UnloadedChunkView extends Chunk {
         return null;
     }
 
+    @Nullable
     @Override
-    public @Nullable NbtCompound getPackedBlockEntityNbt(BlockPos pos) {
+    public NbtCompound getPackedBlockEntityNbt(BlockPos pos, RegistryWrapper.WrapperLookup registryLookup) {
         return null;
     }
 

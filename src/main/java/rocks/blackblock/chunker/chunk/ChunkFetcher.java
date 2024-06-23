@@ -9,15 +9,13 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.world.ServerChunkLoadingManager;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.server.world.ThreadedAnvilChunkStorage;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.ChunkSerializer;
 import net.minecraft.world.Heightmap;
@@ -28,7 +26,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import rocks.blackblock.chunker.Chunker;
 import rocks.blackblock.chunker.TileGenerator;
 import rocks.blackblock.chunker.mixin.MinecraftServerAccessor;
 import rocks.blackblock.chunker.mixin.ThreadedAnvilChunkStorageMixin;
@@ -55,7 +52,7 @@ public class ChunkFetcher {
     private final ServerWorld world;
 
     // The TACS in use by this world
-    private final ThreadedAnvilChunkStorage tacs;
+    private final ServerChunkLoadingManager tacs;
 
     // Method should (also) be called `createCodec` isntead of method_44343
     private static final Codec<PalettedContainer<BlockState>> CODEC = PalettedContainer.createPalettedContainerCodec(Block.STATE_IDS, BlockState.CODEC, PalettedContainer.PaletteProvider.BLOCK_STATE, Blocks.AIR.getDefaultState());
@@ -81,7 +78,7 @@ public class ChunkFetcher {
     public ChunkFetcher(MinecraftServer server, ServerWorld world) {
         this.regionFolder = new File(((MinecraftServerAccessor) server).getSession().getWorldDirectory(world.getRegistryKey()).toFile(), "region");
         this.world = world;
-        this.tacs = world.getChunkManager().threadedAnvilChunkStorage;
+        this.tacs = world.getChunkManager().chunkLoadingManager;
     }
 
     /**

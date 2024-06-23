@@ -91,7 +91,7 @@ public class Plane {
      * @since   0.1.0
      */
     public static Plane from(String name) {
-        return Plane.from(new Identifier(name));
+        return Plane.from(Identifier.of(name));
     }
 
     /**

@@ -118,10 +118,14 @@ public class BlockSearcher {
      * @param   x      The X-coordinate of the block
      * @param   z      The Z-coordinate of the block
      */
-    public void searchForBlock(Lump lump, int x, int z) {
+    public boolean searchForBlock(Lump lump, int x, int z) {
 
         this.setLump(lump);
         Heightmap heightmap = this.getHeightmap();
+
+        if (heightmap == null) {
+            return false;
+        }
 
         // Get the top, non-air block Y level
         this.height = heightmap.get(x & 15, z & 15);
@@ -136,19 +140,25 @@ public class BlockSearcher {
                 this.block_state = this.lump.getChunk().getBlockState(this.pos);
             } while (this.getCurrentMapColor() == MapColor.CLEAR && this.height > -64);
         }
+
+        return true;
     }
 
     /**
      * Search for the first non-clear (map color) block under the ceiling
      *
      * @param   lump   The lump to search in
-     * @param   x      The X-coordinate of the block
-     * @param   z      The Z-coordinate of the block
+     * @param   x      The X-coordinate of the block (Chunk-local)
+     * @param   z      The Z-coordinate of the block (Chunk-local)
      */
-    public void searchForBlockUnderCeiling(Lump lump, int x, int z) {
+    public boolean searchForBlockUnderCeiling(Lump lump, int x, int z) {
 
         this.setLump(lump);
         Heightmap heightmap = this.getHeightmap();
+
+        if (heightmap == null) {
+            return false;
+        }
 
         // Get the top, non-air block Y level
         this.height = heightmap.get(x & 15, z & 15) - 1;
@@ -182,6 +192,8 @@ public class BlockSearcher {
             this.height = initial_height;
             pos.setY(initial_height);
         }
+
+        return true;
     }
 
     /**

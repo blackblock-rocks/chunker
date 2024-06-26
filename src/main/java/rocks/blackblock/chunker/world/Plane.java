@@ -262,4 +262,38 @@ public class Plane {
         return getLumpAtBlock(pos.getX(), pos.getZ());
     }
 
+    /**
+     * Get the floor at the given X and Z coordinates.
+     * Break through the ceiling if needed.
+     *
+     * @since   0.3.0
+     */
+    public BlockPos getFloorAtBlock(BlockPos pos) {
+        return getFloorAtBlock(pos.getX(), pos.getZ());
+    }
+
+    /**
+     * Get the floor at the given X and Z coordinates.
+     * Break through the ceiling if needed.
+     *
+     * @param   block_x   The block's X position
+     * @param   block_z   The block's Z position
+     *
+     * @since   0.3.0
+     */
+    public BlockPos getFloorAtBlock(int block_x, int block_z) {
+
+        Lump lump = getLumpAtBlock(block_x, block_z);
+
+        if (lump == null) {
+            return null;
+        }
+
+        if (this.hasCeiling()) {
+            return lump.getFloorUnderCeiling(block_x & 15, block_z & 15);
+        } else {
+            return lump.getFloor(block_x & 15, block_z & 15);
+        }
+    }
+
 }

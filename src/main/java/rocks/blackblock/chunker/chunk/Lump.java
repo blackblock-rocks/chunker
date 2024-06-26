@@ -2,6 +2,7 @@ package rocks.blackblock.chunker.chunk;
 
 import net.minecraft.block.MapColor;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.chunk.Chunk;
 import org.jetbrains.annotations.NotNull;
@@ -224,6 +225,55 @@ public class Lump {
      */
     public CompletableFuture<int[]> getColorsAsync() {
         return this.preloadNeighbour(0, -1).thenApplyAsync(lump -> this.getColors());
+    }
+
+    /**
+     * Get the first non-clear block under the ceiling
+     * @since    0.5.0
+     *
+     * @param    pos   The block position to search for (Chunk-local)
+     */
+    @Nullable
+    public BlockPos getFloorUnderCeiling(BlockPos pos) {
+        return getFloorUnderCeiling(pos.getX() & 15, pos.getZ() & 15);
+    }
+
+    /**
+     * Get the first non-clear block under the ceiling
+     * @since    0.5.0
+     *
+     * @param    x   The block X position to search for (Chunk-local)
+     * @param    z   The block Z position to search for (Chunk-local)
+     */
+    @Nullable
+    public BlockPos getFloorUnderCeiling(int x, int z) {
+        BlockSearcher searcher = new BlockSearcher(this.plane);
+        var success = searcher.searchForBlockUnderCeiling(this, x, z);
+
+        if (!success) {
+            return null;
+        }
+
+        return searcher.pos.toImmutable();
+    }
+
+    /**
+     * Get the first non-clear block under the sky
+     * @since    0.5.0
+     *
+     * @param    x   The block X position to search for (Chunk-local)
+     * @param    z   The block Z position to search for (Chunk-local)
+     */
+    @Nullable
+    public BlockPos getFloor(int x, int z) {
+        BlockSearcher searcher = new BlockSearcher(this.plane);
+        var success = searcher.searchForBlock(this, x, z);
+
+        if (!success) {
+            return null;
+        }
+
+        return searcher.pos.toImmutable();
     }
 
     /**

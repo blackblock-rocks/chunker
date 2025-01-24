@@ -17,7 +17,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerChunkLoadingManager;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.ChunkSerializer;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.BiomeKeys;
@@ -31,6 +30,7 @@ import rocks.blackblock.chunker.mixin.MinecraftServerAccessor;
 import rocks.blackblock.chunker.mixin.ThreadedAnvilChunkStorageMixin;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -57,14 +57,6 @@ public class ChunkFetcher {
     // Method should (also) be called `createCodec` isntead of method_44343
     private static final Codec<PalettedContainer<BlockState>> CODEC = PalettedContainer.createPalettedContainerCodec(Block.STATE_IDS, BlockState.CODEC, PalettedContainer.PaletteProvider.BLOCK_STATE, Blocks.AIR.getDefaultState());
     private static final Logger LOGGER = LogManager.getLogger();
-
-    private static Codec<PalettedContainer<Biome>> createCodec(Registry<Biome> biomeRegistry) {
-        return PalettedContainer.createPalettedContainerCodec(biomeRegistry, biomeRegistry.getCodec(), PalettedContainer.PaletteProvider.BIOME, biomeRegistry.getOrThrow(BiomeKeys.PLAINS));
-    }
-
-    private static void logRecoverableError(ChunkPos chunkPos, int y, String message) {
-        LOGGER.error("Recoverable errors when loading section [" + chunkPos.x + ", " + y + ", " + chunkPos.z + "]: " + message);
-    }
 
     /**
      * Initialize the new ChunkFetcher
@@ -277,67 +269,23 @@ public class ChunkFetcher {
         @NotNull
         private Optional<UnloadedChunkView> getChunkFromNbt(NbtCompound chunk_nbt, ChunkPos pos) {
 
-            NbtCompound level = chunk_nbt.getCompound("Level");
-            ChunkStatus status = ChunkStatus.byId(chunk_nbt.getString("Status"));
+            SerializedChunk serialized_chunk = SerializedChunk.fromNbt(world, world.getRegistryManager(), chunk_nbt);
 
-            // We only want fully generated chunks
-            if (!status.isAtLeast(ChunkStatus.FULL)) {
-
-                // Chunks that have been updated via a DFU however are marked as "EMPTY",
-                // but actually contain all the data needed to render the map
-                if (!status.equals(ChunkStatus.EMPTY)) {
-                    return Optional.empty();
-                }
+            if (serialized_chunk == null) {
+                return Optional.empty();
             }
 
-            // Get all the chunk sections from the NBT data
-            NbtList chunk_sections = chunk_nbt.getList("sections", 10);
+            var section_data = serialized_chunk.sectionData();
+            var chunk_sections = new ArrayList<>(section_data.size());
 
-            // Get the amount of vertical sections in this world
-            int vertical_section_count = world.countVerticalSections();
-
-            ChunkSection[] sections = new ChunkSection[vertical_section_count];
-
-            ReadableContainer palettedContainer2;
-            PalettedContainer palettedContainer;
-            Registry<Biome> registry = world.getRegistryManager().get(RegistryKeys.BIOME);
-            Codec<PalettedContainer<Biome>> codec = createCodec(registry);
-
-            for (int i = 0; i < chunk_sections.size(); ++i) {
-                NbtCompound sectionTag = chunk_sections.getCompound(i);
-                int y = sectionTag.getByte("Y");
-                int l = world.sectionCoordToIndex(y);
-
-                if (l >= 0 && l < sections.length) {
-
-                    if (sectionTag.contains("block_states", 10)) {
-                        palettedContainer = (PalettedContainer)CODEC.parse(NbtOps.INSTANCE, sectionTag.getCompound("block_states")).promotePartial((errorMessage) -> {
-                            logRecoverableError(pos, y, errorMessage);
-                        }).getOrThrow(ChunkSerializer.ChunkLoadingException::new);
-                    } else {
-                        palettedContainer = new PalettedContainer(Block.STATE_IDS, Blocks.AIR.getDefaultState(), PalettedContainer.PaletteProvider.BLOCK_STATE);
-                    }
-
-                    if (sectionTag.contains("biomes", 10)) {
-                        palettedContainer2 = (ReadableContainer)codec.parse(NbtOps.INSTANCE, sectionTag.getCompound("biomes")).promotePartial((errorMessage) -> {
-                            logRecoverableError(pos, y, errorMessage);
-                        }).getOrThrow(ChunkSerializer.ChunkLoadingException::new);
-                    } else {
-                        palettedContainer2 = new PalettedContainer(registry.getIndexedEntries(), registry.entryOf(BiomeKeys.PLAINS), PalettedContainer.PaletteProvider.BIOME);
-                    }
-
-                    ChunkSection chunkSection = new ChunkSection((PalettedContainer<BlockState>)palettedContainer, palettedContainer2);
-                    chunkSection.calculateCounts();
-                    sections[l] = chunkSection;
-                }
+            for (SerializedChunk.SectionData data : section_data) {
+                chunk_sections.add(data.chunkSection());
             }
 
-            UnloadedChunkView unloadedChunkView = new UnloadedChunkView(sections, world, pos);
-
-            NbtCompound heightmaps = level.getCompound("Heightmaps");
-            String heightmapName = Heightmap.Type.WORLD_SURFACE.getName();
-            if (heightmaps.contains(heightmapName, 12)) {
-                unloadedChunkView.setHeightmap(Heightmap.Type.WORLD_SURFACE, heightmaps.getLongArray(heightmapName));
+            UnloadedChunkView unloadedChunkView = new UnloadedChunkView(chunk_sections.toArray(new ChunkSection[section_data.size()]), world, pos);
+            var heightmaps_by_type = serialized_chunk.heightmaps();
+            if (heightmaps_by_type.containsKey(Heightmap.Type.WORLD_SURFACE)) {
+                unloadedChunkView.setHeightmap(Heightmap.Type.WORLD_SURFACE, heightmaps_by_type.get(Heightmap.Type.WORLD_SURFACE));
             } else {
                 Heightmap.populateHeightmaps(unloadedChunkView, Collections.singleton(Heightmap.Type.WORLD_SURFACE));
             }

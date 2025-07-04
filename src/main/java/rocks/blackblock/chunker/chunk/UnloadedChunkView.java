@@ -89,7 +89,7 @@ public class UnloadedChunkView extends Chunk {
     }
 
     @Override
-    public @Nullable BlockState setBlockState(BlockPos pos, BlockState state, boolean moved) {
+    public @Nullable BlockState setBlockState(BlockPos pos, BlockState state, int flags) {
         return null;
     }
 

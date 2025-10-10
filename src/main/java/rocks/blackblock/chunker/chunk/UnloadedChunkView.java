@@ -38,7 +38,7 @@ public class UnloadedChunkView extends Chunk {
     private final ChunkPos pos;
 
     UnloadedChunkView(ChunkSection[] sections, World world, ChunkPos pos) {
-        super(pos, UpgradeData.NO_UPGRADE_DATA, world, world.getRegistryManager().getOrThrow(RegistryKeys.BIOME), 0, null, null);
+        super(pos, UpgradeData.NO_UPGRADE_DATA, world, world.getPalettesFactory(), 0, null, null);
         this.sections = sections;
         this.world = world;
         this.worldSurfaceHeightmap = new Heightmap(this, Heightmap.Type.WORLD_SURFACE);

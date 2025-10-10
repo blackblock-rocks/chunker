@@ -1,28 +1,16 @@
 package rocks.blackblock.chunker.chunk;
 
-import com.mojang.serialization.Codec;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtOps;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerChunkLoadingManager;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.Heightmap;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.BiomeKeys;
 import net.minecraft.world.chunk.*;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import rocks.blackblock.chunker.TileGenerator;
@@ -53,10 +41,6 @@ public class ChunkFetcher {
 
     // The TACS in use by this world
     private final ServerChunkLoadingManager tacs;
-
-    // Method should (also) be called `createCodec` isntead of method_44343
-    private static final Codec<PalettedContainer<BlockState>> CODEC = PalettedContainer.createPalettedContainerCodec(Block.STATE_IDS, BlockState.CODEC, PalettedContainer.PaletteProvider.BLOCK_STATE, Blocks.AIR.getDefaultState());
-    private static final Logger LOGGER = LogManager.getLogger();
 
     /**
      * Initialize the new ChunkFetcher
@@ -269,7 +253,7 @@ public class ChunkFetcher {
         @NotNull
         private Optional<UnloadedChunkView> getChunkFromNbt(NbtCompound chunk_nbt, ChunkPos pos) {
 
-            SerializedChunk serialized_chunk = SerializedChunk.fromNbt(world, world.getRegistryManager(), chunk_nbt);
+            SerializedChunk serialized_chunk = SerializedChunk.fromNbt(world, world.getPalettesFactory(), chunk_nbt);
 
             if (serialized_chunk == null) {
                 return Optional.empty();

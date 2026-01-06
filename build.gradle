@@ -101,6 +101,8 @@ dependencies {
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
 	modImplementation ("rocks.blackblock:blackblock-bib:${constructVersion(project.blackblock_bib_version)}")
+
+	implementation "com.diogonunes:JColor:5.5.1"
 }
 
 // Modify the contents of the "fabric.mod.json" file
